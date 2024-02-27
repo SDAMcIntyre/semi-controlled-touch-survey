@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+want	332	1	24	all
+attent	329	2	24	all
+comfort	325	3	19	all
+show	304	4	24	all
+feel	302	5	24	all
+make	254	6	24	all
+get_my_attent	251	7	24	all
+affect	160	8	24	all
+get	143	9	24	all
+love	142	10	21	all
+calm	133	11	20	all
+way	103	12	24	all
+give	93	13	24	all
+play	86	14	24	all
+know	84	15	23	all

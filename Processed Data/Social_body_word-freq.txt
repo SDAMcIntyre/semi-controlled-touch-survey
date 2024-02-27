@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+arm	957	1	24	all
+hand	469	2	24	all
+shoulder	400	3	24	all
+back	365	4	24	all
+forearm	290	5	24	all
+leg	166	6	24	all
+thigh	108	7	24	all
+head	91	8	23	all
+face	86	9	23	all
+neck	68	10	19	all
+wrist	49	11	21	all
+chest	47	12	20	all
+belli	35	13	17	all
+cheek	23	14	16	all
+genit	21	15	13	all

@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+calm	382	1	24	all
+comfort	361	2	24	all
+love	352	3	24	all
+affect	267	4	24	all
+happi	182	5	24	all
+annoy	161	6	21	all
+connect	160	7	24	all
+irrit	123	8	20	all
+trust	117	9	23	all
+safe	114	10	22	all
+surpris	93	11	21	all
+care	91	12	22	all
+discomfort	89	13	24	all
+ador	89	13	22	all
+relax	88	15	22	all

@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+home	952	1	24	all
+room	203	2	24	all
+offic	197	3	24	all
+hous	168	4	24	all
+sofa	164	5	24	all
+work	145	6	24	all
+bedroom	139	7	23	all
+doctor	117	8	24	all
+live	90	9	24	all
+bed	90	9	23	all
+public	82	11	23	all
+sit	74	12	23	all
+kitchen	73	13	22	all
+street	69	14	19	all
+couch	66	15	23	all

@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+watch	240	1	24	all
+arm	215	2	24	all
+talk	206	3	24	all
+friend	204	4	24	all
+sit	166	5	24	all
+hand	141	6	24	all
+rub	137	7	12	all
+comfort	128	8	18	all
+want	125	9	21	all
+feel	122	10	24	all
+attent	120	11	21	all
+tv	113	12	24	all
+get_my_attent	99	13	20	all
+child	97	14	20	all
+back	96	15	24	all

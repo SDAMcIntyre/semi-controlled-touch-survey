@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+comfort	411	1	23	all
+calm	387	2	24	all
+gentl	330	3	24	all
+annoy	266	4	23	all
+attent	257	5	24	all
+warm	257	5	24	all
+grab	227	7	24	all
+friend	215	8	24	all
+sooth	164	9	23	all
+pleasant	162	10	24	all
+delic	158	11	24	all
+relax	146	12	23	all
+bond	128	13	24	all
+enjoy	117	14	24	all
+tender	114	15	24	all

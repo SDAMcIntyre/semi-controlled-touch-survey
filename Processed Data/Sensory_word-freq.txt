@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+soft	496	1	24	all
+rub	388	2	21	all
+warm	371	3	23	all
+tap	353	4	22	all
+gentl	283	5	24	all
+pat	255	6	24	all
+smooth	236	7	23	all
+stroke	220	8	23	all
+light	216	9	24	all
+press	206	10	23	all
+poke	201	11	17	all
+fast	161	12	23	all
+slow	132	13	22	all
+consist	132	13	24	all
+persist	129	15	22	all

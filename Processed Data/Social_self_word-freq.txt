@@ -1,0 +1,16 @@
+feature	frequency	rank	docfreq	group
+friend	542	1	24	all
+romantic_partn	343	2	24	all
+family_memb	203	3	24	all
+child	201	4	24	all
+partner	158	5	24	all
+colleagu	129	6	24	all
+stranger	114	7	24	all
+girlfriend	114	7	24	all
+husband	97	9	23	all
+doctor	82	10	21	all
+boyfriend	74	11	22	all
+therapist	71	12	23	all
+mother	71	12	20	all
+sister	54	14	23	all
+profession	48	15	22	all
