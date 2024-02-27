@@ -51,14 +51,14 @@ video_8_questions <- video_questions[str_detect(video_questions, " 8_")]
 annoy_data <- maxqda_data %>% 
   filter(Code == "RELATIONAL INTIMACY > Situational > What > Annoy / Tease") %>% 
   # mutate(freq = rowSums(pick(any_of(video_questions)))) %>% 
-  select(c("Document name", "Code", "Segment", video_8_questions)) 
+  select(c("Document name", "Code", "Segment", video_questions)) 
 
 
 annoy_no_video <- annoy_data %>% 
 # maxqda_data %>% 
-  select(c("Document name", "Segment", video_8_questions)) %>% 
+  select(c("Document name", "Segment", video_questions)) %>% 
   pivot_longer(
-    cols = video_8_questions,
+    cols = video_questions,
     names_to = "Video_Q",
     values_to = "Coded"
   ) %>% 
