@@ -50,5 +50,7 @@ rsconnect/
 
 # Mac OS
 *.DS_Store
+
+# Document files
 *.zip
 *.pptx
