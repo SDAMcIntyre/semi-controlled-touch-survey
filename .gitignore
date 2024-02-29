@@ -54,3 +54,6 @@ rsconnect/
 # Document files
 *.zip
 *.pptx
+
+*.xlsx
+*.csv
