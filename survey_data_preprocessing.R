@@ -36,7 +36,7 @@ video_data <- read_csv(video_info_file)
 # Appropriateness
 # Valence&Arousal_x - valence&arousal x coordinate value
 # Valence&Arousal_y - valence&arousal y coordinate value
-target_columns <- c("Document_group", "Document_name","Video", "Age", "Gender", "Belongingness", 
+target_columns <- c("Document_group", "Key", "Document_name","Video", "Age", "Gender", "Belongingness", 
                     "Force", "Speed", "Contact_area", "Movement_type",
                     "Social_self", "Social_body", "Social_place", "Social_context", "Intention&Purpose", 
                     "Sensory", "Emotional_self", "Emotional_touch", "Appropriateness",
@@ -64,6 +64,7 @@ for (i in 1:total_rows) {
   unique_numbers <- unique_numbers[!is.na(unique_numbers)] # get rid of any leftover NA
   # Loop through unique numbers
   for (video_id in unique_numbers) {
+    key_value <- paste(document_name, video_id,sep = "-")
     ctr <- 0 # count how many NA values were there
     # get row from video_data that contains info about the current video
     single_video_info <- video_data[video_data$VideoID %in% video_id, , drop = FALSE]
@@ -192,7 +193,7 @@ for (i in 1:total_rows) {
         print(video_id)
     }
     else { # create a row for each video+participant combination
-      my_row <- c(document_group, document_name, video_id, age, gender, belongingness, 
+      my_row <- c(document_group, key_value, document_name, video_id, age, gender, belongingness, 
                   force, speed, contact_area, movement_type,
                   social_self, social_body, social_place, social_context, intention_purpose, sensory, emotional_self, emotional_touch, approprietness,
                   val_arou_x, val_arou_y)
