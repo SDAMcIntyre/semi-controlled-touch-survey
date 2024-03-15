@@ -211,3 +211,11 @@ target_data_format <- as.data.frame(target_data_format)
 # save the output excel file
 write.xlsx(target_data_format, "output_ilona15_03_24.xlsx")
 
+# Assuming your data frame is called df
+all_unique_keys <- length(unique(target_data_format$Key)) == nrow(target_data_format)
+
+if (all_unique_keys) {
+  print("All rows in the 'key' column are unique.")
+} else {
+  print("There are duplicate rows in the 'key' column.")
+}
