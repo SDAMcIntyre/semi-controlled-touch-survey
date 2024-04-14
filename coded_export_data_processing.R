@@ -24,6 +24,8 @@ columns_to_keep <- c("Document name", "Code", "Segment",
 
 # Select only the specified columns from the large table
 coded_export_data <- coded_export_data %>% select(all_of(columns_to_keep))
+# change long col name: Other ... to just Other
+names(coded_export_data)[names(coded_export_data) == "Other codes assigned to segment"] <- "Other"
 
 #########################################################################
 # remove rows with demographics. they mess up the structure of the data
@@ -55,10 +57,82 @@ for (idx in video_rows) {
 
 # Add VideoID_vector as the first column
 coded_no_demographic_df <- cbind(VideoID = VideoID_vector, coded_no_demographic_df)
+# remove the rest of demographic info
+# columns to keep
+non_demographic_columns_to_keep <- c("Document name", "VideoID","Code", "Segment", "Other")
+coded_no_demographic_df <- coded_no_demographic_df %>% select(all_of(non_demographic_columns_to_keep))
+#########################################################################################
+#########################################################################################
+# Columns that we want in the organized file
+# PID,VideoID,Segment,Code,Question
+
+# list of questions for each video
+video_questions <- c(
+                    "Social_self", "Social_body", "Social_place", "Social_context", "Intention&Purpose", 
+                    "Sensory", "Emotional_self", "Emotional_touch", "Appropriateness"
+                    )
+# function that will extract the question from the string
+extract_question <- function(keywords, input_string) {
+  # Initialize a vector to store matching keywords
+  matching_keywords <- vector("character")
+  
+  # Iterate over each keyword to check if it is in the input string
+  for (keyword in keywords) {
+    if (grepl(keyword, input_string, fixed = TRUE)) {
+      matching_keywords <- c(matching_keywords, keyword)
+    }
+  }
+  
+  # Check if there are any matches and return the first one
+  if (length(matching_keywords) > 0) {
+    return(matching_keywords[1])
+  } else {
+    return("NA")  # Return NA if no matches found
+  }
+}
+
+
+# keep only rows that either have word RELATIONAL or Autocode in Code column
+codes_only_df <- coded_no_demographic_df[grepl("RELATIONAL|Autocode", coded_no_demographic_df$Code), ]
+
+# create a column with video questions for each row
+no_rows <- nrow(codes_only_df)
+questions_vector <- vector("character",no_rows)
+ctr <-0
+for (ind in 1:no_rows) {
+  # Get the cell value for the current row
+  cell_value <- codes_only_df$Code[ind]
+  # Check if the cell contains the word "Autocode"
+  if (grepl("Autocode", cell_value)) {
+    split_string <- strsplit(cell_value, ">")
+    question_with_id <- trimws(split_string[[1]][1])
+    # Extract the part before the first "_"
+    question <- sub("^(.*?)_", "", question_with_id)
+    # there was one question that ended with _02
+    if (grepl("_02$", question)) {
+      question <- sub("_02$", "", question)
+      print(question)
+    }
+    questions_vector[ind] <- question
+  } # end if contains Autocode
+  if (grepl("RELATIONAL", cell_value)) {
+    ctr <- ctr +1
+    cell_with_question <- codes_only_df$Other[ind]
+    question <- extract_question(video_questions,cell_with_question)
+    
+    questions_vector[ind] <- question
+  } # end if contains RELATIONAL
+}
+# Add Question as the first column
+# Adding the vector as a new column
+codes_only_df[["Question"]] <- questions_vector
+
+new_col_order <- c("Document name", "VideoID", "Segment", "Code", "Question", "Other")
+codes_only_df <- codes_only_df %>% select(all_of(new_col_order))
 
 
 # export for checking:
-write.csv(coded_no_demographic_df, "output_preprocessed_codes_ilona_11_04_24.csv", row.names = FALSE)
+write.csv(codes_only_df, "output_preprocessed_codes_ilona.csv", row.names = FALSE)
 
 
 
