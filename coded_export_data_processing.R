@@ -8,7 +8,7 @@ library(dplyr)
 ##############################################################
 # Script used to clean and re-format the coded export file 
 #############################################################
-
+PROCESSED_DATA_FOLDER <- "Processed Data/"
 # original file exported from the coding software
 coded_export_data_file <- "attempt1_allRecoded.xlsx"
 # read the file
@@ -98,41 +98,44 @@ codes_only_df <- coded_no_demographic_df[grepl("RELATIONAL|Autocode", coded_no_d
 # create a column with video questions for each row
 no_rows <- nrow(codes_only_df)
 questions_vector <- vector("character",no_rows)
-ctr <-0
+# clean the code column from unnecessary data
+codes_vector <- vector("character",no_rows)
 for (ind in 1:no_rows) {
   # Get the cell value for the current row
   cell_value <- codes_only_df$Code[ind]
   # Check if the cell contains the word "Autocode"
   if (grepl("Autocode", cell_value)) {
-    split_string <- strsplit(cell_value, ">")
-    question_with_id <- trimws(split_string[[1]][1])
-    # Extract the part before the first "_"
-    question <- sub("^(.*?)_", "", question_with_id)
-    # there was one question that ended with _02
-    if (grepl("_02$", question)) {
-      question <- sub("_02$", "", question)
-      print(question)
-    }
+    # get the question from that cell
+    question <- extract_question(video_questions,cell_value)
     questions_vector[ind] <- question
+    # get clean code
+    # Split the string by ":"
+    split_string <- unlist(strsplit(cell_value, ":"))
+    # Get the last element of the split string
+    code <- trimws(tail(split_string, 1))
+    codes_vector[ind] <- code
   } # end if contains Autocode
   if (grepl("RELATIONAL", cell_value)) {
-    ctr <- ctr +1
+    # get the question from the cell in "Other" column
     cell_with_question <- codes_only_df$Other[ind]
     question <- extract_question(video_questions,cell_with_question)
-    
     questions_vector[ind] <- question
+    # add the whole line to codes
+    codes_vector[ind] <- cell_value
   } # end if contains RELATIONAL
 }
 # Add Question as the first column
 # Adding the vector as a new column
 codes_only_df[["Question"]] <- questions_vector
+# replace Code column with cleaner one
+codes_only_df$Code <- codes_vector
 
-new_col_order <- c("Document name", "VideoID", "Segment", "Code", "Question", "Other")
+new_col_order <- c("Document name", "VideoID", "Segment", "Code", "Question")
 codes_only_df <- codes_only_df %>% select(all_of(new_col_order))
 
 
 # export for checking:
-write.csv(codes_only_df, "output_preprocessed_codes_ilona.csv", row.names = FALSE)
+write.csv(codes_only_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona.csv"), row.names = FALSE)
 
 
 
