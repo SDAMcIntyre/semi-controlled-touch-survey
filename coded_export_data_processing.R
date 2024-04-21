@@ -184,7 +184,6 @@ process_video_row <- function(questions_vector, df, ind) {
   video_row <- df[df$PID == df$PID[ind] &
                     df$VideoID == df$VideoID[ind] &
                     grepl("^Video", df$Code), ]
-  
   # Check if any rows were found
   if (nrow(video_row) == 0) {
     # print(df[ind, ])
@@ -327,7 +326,7 @@ for (ind in 1:no_rows) {
       else {
         question <- "NA"
         missing_video_cell_when_needed <- missing_video_cell_when_needed +1}
-    } # end if question was not in Other
+      } # end if question was not in Other
     if (length(questions) > 1) { # Other had multiple questions
       # for now assign the first question
       question <- questions[1]
@@ -358,6 +357,7 @@ separated_relation_df <- get_detailed_relation_df(codes_only_df,
                                                   relational_rows_for_splitting,
                                                   video_questions,
                                                   new_temp_column_names)
+# how many after splitting don't have a question
 separated_but_na <- separated_relation_df[separated_relation_df$Question == "NA", ]
 # remove the origin rows that start with RELATION that had multiple questions
 codes_only_df <- codes_only_df[-relational_rows_for_splitting, ]
@@ -371,6 +371,7 @@ joined_df <- rbind(codes_only_df, separated_relation_df)
 grouped_df <- joined_df %>% 
   arrange(PID, VideoID)
 
+
 # remove Appropriateness question
 grouped_df <- grouped_df %>%
   filter(Question != "Appropriateness")
@@ -381,6 +382,7 @@ missing_questions <- grouped_df[grouped_df$Question == "NA", ] # 98
 # change order of columns
 new_col_order <- c("PID", "VideoID", "Segment", "Code", "Question", "Other")
 grouped_df <- grouped_df %>% select(all_of(new_col_order))
+
 
 # check if all videos have all unique questions answered
 # keep in mind that NA will be counted as unique question
@@ -393,9 +395,28 @@ result_no_NA <- no_NA_questions %>%
   summarize(unique_question_count = n_distinct(Question))
 
 all_8 <- all(result_no_NA$unique_question_count == 8)
+
 # Count the occurrences where unique_question_count is not equal to 8
 not_equal_8 <- sum(result_no_NA$unique_question_count < 8) # 111
+##############################################################
+# How many I would have to exclude? Because of NA
+unique_combinations <- missing_questions %>%
+  distinct(PID, VideoID)
+# exclude missing
+excluded_videos_with_missing_questions_df <- grouped_df %>%
+  anti_join(unique_combinations, by = c("PID", "VideoID"))
+# how many unique PID+VideoID are there
+total_unique_video_pid <- excluded_videos_with_missing_questions_df %>%
+  distinct(PID, VideoID)
+# distinct questions
+result <- excluded_videos_with_missing_questions_df %>%
+  group_by(PID, VideoID) %>%
+  summarize(unique_question_count = n_distinct(Question))
 
+all_8 <- all(result$unique_question_count == 8)
+# Count the occurrences where unique_question_count is not equal to 8
+less_than_8 <- sum(result$unique_question_count < 8) # 60
+##############################################################
 # export for checking:
 write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona19_04.csv"), row.names = FALSE)
 
