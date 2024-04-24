@@ -100,7 +100,7 @@ for (idx in 1:total_rows) {
   my_string <- coded_no_demographic_df$Code[idx]
   id <- find_video_number_from_question(video_questions,my_string)
   if (id == 0) { # if id was not found under Code, check under other
-    # check if question is in Code column
+    # check if question is in Other column
     my_string <- coded_no_demographic_df$Other[idx]
     id <- find_video_number_from_question(video_questions,my_string)
   }
@@ -109,7 +109,7 @@ for (idx in 1:total_rows) {
     # One-liner to extract the number after "Video" and convert it to integer
     id <- as.integer(gsub("\\D", "", regmatches(my_string, regexpr("Video (\\d+)", my_string))))
   }
-  
+
   if (length(id) == 0) { # I give up
     id <- 0
     print(my_string)
@@ -117,7 +117,7 @@ for (idx in 1:total_rows) {
   }
   VideoID_vector[idx] <- id
 }
-
+###################################################################################################
 # Note: there were 8 empty cells in "Other" columns, therefore they were assigned video id 0
 
 # Add VideoID_vector as the first column
@@ -199,8 +199,9 @@ process_video_row <- function(questions_vector, df, ind) {
     print(df$PID[ind])
     print(df$VideoID[ind])
     print("Video cell does not have all questions answered")
+    print(video_row$Segment)
+    print(split_string)
     return(c("NA"))
-    # print(video_row$Segment)
   }
   return(split_string)
 }
@@ -240,7 +241,7 @@ get_detailed_relation_df <- function(old_df, rows, video_questions, new_column_n
     
     # Ensure questions and segment have the same length
     if (length(questions) != length(segment)) {
-      # check if removinf Sensory will make it match
+      # check if removing Sensory will make it match
       if ("Sensory" %in% questions) {
         questions <- questions[questions != "Sensory"]
       }
@@ -359,6 +360,7 @@ separated_relation_df <- get_detailed_relation_df(codes_only_df,
                                                   new_temp_column_names)
 # how many after splitting don't have a question
 separated_but_na <- separated_relation_df[separated_relation_df$Question == "NA", ]
+
 # remove the origin rows that start with RELATION that had multiple questions
 codes_only_df <- codes_only_df[-relational_rows_for_splitting, ]
 
@@ -367,6 +369,7 @@ codes_only_df <- codes_only_df[grepl("RELATIONAL|Autocode", codes_only_df$Code),
 
 # add rows from separated
 joined_df <- rbind(codes_only_df, separated_relation_df)
+
 # sort nicely
 grouped_df <- joined_df %>% 
   arrange(PID, VideoID)
@@ -378,6 +381,9 @@ grouped_df <- grouped_df %>%
 
 # check if there are any missing questions
 missing_questions <- grouped_df[grouped_df$Question == "NA", ] # 98
+# export for checking:
+write.csv(missing_questions, "missing_questions_ilona24_04.csv", row.names = FALSE)
+
 
 # change order of columns
 new_col_order <- c("PID", "VideoID", "Segment", "Code", "Question", "Other")
@@ -418,9 +424,17 @@ all_8 <- all(result$unique_question_count == 8)
 less_than_8 <- sum(result$unique_question_count < 8) # 60
 ##############################################################
 # export for checking:
-write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona19_04.csv"), row.names = FALSE)
+write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona24_04.csv"), row.names = FALSE)
 
 #############################################################
+# check mismatch of lines in answers in video and video questions
+# R_2RUsV3SU6UbZ3as 22
+# R_sb3cXFomtybyKlj 14
+# R_BM9eDkmZBgiYlpv 21
+test <- grouped_df |> 
+  filter(PID == "R_sb3cXFomtybyKlj" & VideoID == 14)
+view(test)
+
 
 
 
