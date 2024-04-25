@@ -148,6 +148,25 @@ no_video_id_rows_indexes <- which(coded_no_demographic_df$VideoID == 0)
 # columns to keep
 non_demographic_columns_to_keep <- c("PID", "VideoID","Code", "Segment", "Other")
 codes_only_df <- coded_no_demographic_df %>% select(all_of(non_demographic_columns_to_keep))
+#############################################################################################
+# check how many video cells are missing
+# UNIQUENESS OF ROWS ####
+unique_video_watches <- codes_only_df %>% 
+  group_by(PID, VideoID)  %>% 
+  tally()
+# Filter rows where Code starts with "Video"
+video_rows_df <- codes_only_df %>% 
+  filter(grepl("^Video", Code))
+
+# Calculate the number of combinations with missing "Video" codes
+missing_video_count <- nrow(unique_video_watches) - nrow(video_rows_df)
+# get which ones:
+# Create a dataframe with all unique PID and VideoID combinations
+all_combinations_df <- unique(codes_only_df[, c("PID", "VideoID")])
+
+# Filter out combinations with rows in video_rows_df
+missing_combinations_df <- anti_join(all_combinations_df, video_rows_df, by = c("PID", "VideoID"))
+write.csv(missing_combinations_df, "missing_video_ilona25_04.csv", row.names = FALSE)
 
 
 #########################################################################################
@@ -378,6 +397,13 @@ grouped_df <- joined_df %>%
 # remove Appropriateness question
 grouped_df <- grouped_df %>%
   filter(Question != "Appropriateness")
+
+
+# UNIQUENESS OF ROWS ####
+duplicates <- codes_only_df %>% 
+  group_by(PID, VideoID, Segment, Question, Code) %>% 
+  tally() %>% 
+  filter(n!=1) # should be empty if every combo of above variables is unique
 
 # check if there are any missing questions
 missing_questions <- grouped_df[grouped_df$Question == "NA", ] # 98
