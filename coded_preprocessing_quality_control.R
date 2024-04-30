@@ -34,9 +34,12 @@ coded_export_data %>%
 
 # Do they have "Situational > What" in the code?
 missing_context <- ilona_out %>% 
-  filter(is.na(Question) & str_detect(Code, "Situational > What")) 
+  filter(is.na(Question) & str_detect(Code, "Situational > What")) #%>% View()
 
 nrow(missing_context)
+
+missing_context %>% 
+  write_csv("missing_Q_situationalwhat60.csv")
 
 # not yet accounted for
 missing_Q2 <- ilona_out %>% 
@@ -52,6 +55,15 @@ missing_Q2 %>%
   tally() %>% 
   arrange(-n) %>% 
   select(Code)
+
+
+
+# Solution
+# 
+# Situational > What = refers to the Social Context question and may also refer to Intention & Purpose, as many participants have not differentiated these 2.
+# 
+# Get remaining 38 from "Copy of missing_Q_remaining38_wQuestionColumn_ADDED.xlsx"
+
 
 # UNIQUENESS OF ROWS ####
 duplicates <- ilona_out %>% 
