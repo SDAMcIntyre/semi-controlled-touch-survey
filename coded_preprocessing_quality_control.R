@@ -56,14 +56,16 @@ missing_Q2 %>%
   arrange(-n) %>% 
   select(Code)
 
-
-
 # Solution
 # 
-# Situational > What = refers to the Social Context question and may also refer to Intention & Purpose, as many participants have not differentiated these 2.
+# Get 60 from "Copy of missing_Q_situationalwhat60_wQuestionColumn_ADDED.xlsx"
 # 
 # Get remaining 38 from "Copy of missing_Q_remaining38_wQuestionColumn_ADDED.xlsx"
 
+with_questions <- rbind(
+  read_excel("Copy of missing_Q_situationalwhat60_wQuestionColumn_ADDED.xlsx"),
+  read_excel("Copy of missing_Q_remaining38_wQuestionColumn_ADDED.xlsx")
+)
 
 # UNIQUENESS OF ROWS ####
 duplicates <- ilona_out %>% 
