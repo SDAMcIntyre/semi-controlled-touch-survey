@@ -10,7 +10,7 @@ library(dplyr)
 #############################################################
 PROCESSED_DATA_FOLDER <- "Processed Data/"
 # original file exported from the coding software
-coded_export_data_file <- "attempt1_allRecoded.xlsx"
+coded_export_data_file <- "attempt1_allRecoded_modified03_05_24.xlsx"
 # read the file
 coded_export_data <- read_excel(coded_export_data_file)
 
@@ -27,6 +27,7 @@ video_questions <- c(
 columns_to_keep <- c("Document name", "Code", "Segment", 
                      "Other codes assigned to segment", "Age", "Gender", 
                      "Country", "Language", "Belongingness")
+
 
 # Select only the specified columns from the large table
 coded_export_data <- coded_export_data %>% select(all_of(columns_to_keep))
@@ -62,6 +63,7 @@ find_video_number_from_question <- function(keywords, input_string) {
   found_id <- 0
   # Iterate over each keyword to check if it is in the input string
   for (keyword in keywords) {
+    # add some warning that there more than one numbers (questions)
     # Create a regular expression pattern to match one or two digits followed by an underscore and then the keyword
     # sometimes followed by keyword and _ (23_Intention$Purpose_02)
     # pattern <- paste0("\\b[0-9]{1,2}_", keyword, "\\b")
@@ -203,7 +205,7 @@ duplicates <- codes_only_df %>%
 cases_to_keep_just_one <- c("R_1nUPwvHLcXJJr3d",
                             "R_1r7eF9ZpHmrt6a8",
                             "R_24OvUwXWv7GhaOB",
-                            "R_28GxGerQJIriysE",
+                            "R_28GxGerQJIriysE", # not in duplicates any more
                             "R_2cuRkGjt232mWsZ",
                             "R_2zwlIg2JrvSMfHI", # not in duplicates any more, but reappears later, real duplicate
                             "R_UFnb3mIMesLjZhn",
@@ -243,7 +245,7 @@ remaining_duplicates <- codes_only_df %>%
   group_by(PID, VideoID, Segment, Code) %>% 
   tally() %>% 
   filter(n!=1) # should be empty if every combo of above variables is unique
-# 97 remaining....
+# 96 remaining....
 #############################################################################################
 # # check how many video cells are missing
 # 
@@ -360,7 +362,8 @@ retrieve_question_based_on_answer_in_segment <- function(questions, segment, my_
   if (length(idx) > 0) {
     # Retrieve the corresponding question from the questions vector
     my_index <- idx[1]
-    return(questions[idx])
+    # return(questions[idx])
+    return(questions[my_index])
   } else {
     # If my_string is not found, return NA
     return("NA")
@@ -454,6 +457,7 @@ missing_video_cell_when_needed <- 0
 # clean the code column from unnecessary data
 # codes_vector <- vector("character",no_rows)
 # vector with indexes for relationsl rows that have multiple questions
+# 3688 rows
 relational_rows_for_splitting <- c()
 for (ind in 1:no_rows) {
   # Get the cell value for the current row
@@ -470,7 +474,7 @@ for (ind in 1:no_rows) {
     # code <- trimws(tail(split_string, 1))
     # codes_vector[ind] <- code
   } # end if contains Autocode
-  if (grepl("RELATIONAL", cell_value)) {
+  else if (grepl("RELATIONAL", cell_value)) {
     # get the question from the cell in "Other" column
     cell_with_question <- codes_only_df$Other[ind]
     questions <- extract_questions(video_questions,cell_with_question)
@@ -484,10 +488,17 @@ for (ind in 1:no_rows) {
       else {
         question <- "NA"
         missing_video_cell_when_needed <- missing_video_cell_when_needed +1}
-      } # end if question was not in Other
+    } # end if question was not in Other
     if (length(questions) > 1) { # Other had multiple questions
       # for now assign the first question
       question <- questions[1]
+      ########################################
+      # debug
+      if (ind == 35655) {
+        print("Debug")
+        print(codes_only_df$Code[ind])
+      }
+      ########################################
       # add index for further processing and splitting
       relational_rows_for_splitting <- c(relational_rows_for_splitting, ind)
     } # end if len > 1
@@ -502,51 +513,15 @@ for (ind in 1:no_rows) {
   }
 }
 
+# we have one case of only 8 questions answered: PID: R_30kOsStRfZm9yre Video: 1 (The participant did not answer: Emotional_touch)
 # Add Question as the first column
 # Adding the vector as a new column
 codes_only_df[["Question"]] <- questions_vector
-############################################################
-# debug
-# check duplicates again
-# one duplicate
-remaining_duplicates <- codes_only_df %>% 
-  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
-  tally() %>% 
-  filter(n!=1) # should be empty if every combo of above variables is unique
-# check the only duplicate
-checkPID <- "R_2zwlIg2JRvSMfHI"
-duplicates %>% 
-  filter(
-    PID == checkPID
-  ) %>% View
-# it was in Sarah's list of duplicates
-my_row <- remaining_duplicates %>%
-    filter(PID == checkPID)
-if (nrow(my_row) > 0) {
-    print(checkPID)
-    my_videoID <- my_row$VideoID
-    my_segment <- my_row$Segment
-    my_code <- my_row$Code
-    my_question <- my_row$Question
-    matching_row <- codes_only_df %>%
-      filter(PID == checkPID,
-             VideoID == my_videoID,
-             Segment == my_segment,
-             Code == my_code,
-             Question == my_question)
-    # Keep only the first row of the matching rows
-    matching_row_to_keep <- matching_row %>%
-      slice(1)
-    # Remove all but the first matching row from codes_only_df
-    codes_only_df <- codes_only_df %>%
-      anti_join(matching_row_to_keep) %>%
-      bind_rows(matching_row_to_keep)  # Append the first matching row back to codes_only_df
-}
-# check if removed
-remaining_duplicates <- codes_only_df %>% 
-  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
-  tally() %>% 
-  filter(n!=1)
+#########################################################
+# # debug 21_Sensory > Autocode - ANY: comfort (Lemmatized) dissapears later ??? !!!
+# test <- codes_only_df |>
+#   filter(PID == "R_wZV9rmD5c6rL2TL" & VideoID == 21)
+# view(test)
 #########################################################
 # # debug (check weird appropriatness case where segment clearly appropriatness question was assigned a different question)
 # R_2RUsV3SU6UbZ3as 22
@@ -571,18 +546,35 @@ separated_relation_df <- get_detailed_relation_df(codes_only_df,
 separated_but_na <- separated_relation_df[separated_relation_df$Question == "NA", ]
 #########################################################
 # debug duplicates
+# 0 left
 dupl1 <- separated_relation_df %>% 
   group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
+  tally() %>% 
+  filter(n!=1)
+# 0 left
+dupl2 <- separated_relation_df %>% 
+  group_by(PID, VideoID, Code, Segment, Question) %>% 
   tally() %>% 
   filter(n!=1)
 #########################################################
 
 # remove the origin rows that start with RELATION that had multiple questions
+# 40077 - 3688 = 36389
 codes_only_after_removing_split_cells_df <- codes_only_df[-relational_rows_for_splitting, ]
-
+############################################################################
+# # debug 21_Sensory > Autocode - ANY: comfort (Lemmatized) gone ??? !!!
+# test <- codes_only_after_removing_split_cells_df |>
+#   filter(PID == "R_wZV9rmD5c6rL2TL" & VideoID == 21)
+# view(test)
+########################################################
 # keep only rows that either have word RELATIONAL or Autocode in Code column
 codes_only_no_video_df <- codes_only_after_removing_split_cells_df[grepl("RELATIONAL|Autocode", codes_only_after_removing_split_cells_df$Code), ]
-
+############################################################################
+# # debug
+# test1 <- codes_only_no_video_df |>
+#   filter(PID == "R_wZV9rmD5c6rL2TL" & VideoID == 21)
+# view(test1)
+########################################################
 # add rows from separated
 joined_df <- rbind(codes_only_no_video_df, separated_relation_df)
 
@@ -594,7 +586,51 @@ grouped_df <- joined_df %>%
 # remove Appropriateness question
 grouped_df <- grouped_df %>%
   filter(Question != "Appropriateness")
-
+# 0 duplicates left
+############################################################
+# debug
+# check duplicates again
+# one duplicate
+remaining_duplicates <- grouped_df %>% 
+  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
+  tally() %>% 
+  filter(n!=1) # should be empty if every combo of above variables is unique
+# check the only duplicate
+checkPID <- "R_2zwlIg2JRvSMfHI"
+# it was in Sarah's list of duplicates
+my_row <- remaining_duplicates %>%
+  filter(PID == checkPID)
+if (nrow(my_row) > 0) {
+  print(checkPID)
+  my_videoID <- my_row$VideoID
+  my_segment <- my_row$Segment
+  my_code <- my_row$Code
+  my_question <- my_row$Question
+  matching_row <- grouped_df %>%
+    filter(PID == checkPID,
+           VideoID == my_videoID,
+           Segment == my_segment,
+           Code == my_code,
+           Question == my_question)
+  # Keep only the first row of the matching rows
+  matching_row_to_keep <- matching_row %>%
+    slice(1)
+  # Remove all but the first matching row from codes_only_df
+  grouped_df <- grouped_df %>%
+    anti_join(matching_row_to_keep) %>%
+    bind_rows(matching_row_to_keep)  # Append the first matching row back to codes_only_df
+}
+# check if removed
+remaining_duplicates <- grouped_df %>% 
+  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
+  tally() %>% 
+  filter(n!=1)
+# 0 duplicates left
+#########################################################
+# # debug
+# test2 <- grouped_df |>
+#   filter(PID == "R_wZV9rmD5c6rL2TL" & VideoID == 21)
+# view(test2)
 #########################################################
 # # debug (check weird appropriatness case where segment clearly appropriatness question was assigned a different question)
 # R_2RUsV3SU6UbZ3as 22
@@ -607,18 +643,13 @@ grouped_df <- grouped_df %>%
 #########################################################
 # UNIQUENESS OF ROWS ####
 # debug
-# below results in zero duplicates
-remaining_duplicates <- grouped_df %>% 
-  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
-  tally() %>% 
-  filter(n!=1)
-# but below results in 2 duplicates
+# but below results in 1 duplicate (so "Other" is unique)
 remaining_duplicates <- grouped_df %>% 
   group_by(PID, VideoID, Segment, Question, Code) %>% 
   tally() %>% 
   filter(n!=1) 
 # R_1nUPwvHLcXJJr3d is a real duplicate 
-# R_28GxGerQJIriysE : according to Other, one case was classified as Sensory, the second case as Emotional_self
+# R_28GxGerQJIriysE : according to Other, one case was classified as Sensory, the second case as Emotional_self ?
 # removing the real one
 my_row <- remaining_duplicates %>%
   filter(PID == "R_1nUPwvHLcXJJr3d")
@@ -648,71 +679,148 @@ remaining_duplicates <- grouped_df %>%
 ###########################################################
 
 # check if there are any missing questions
-missing_questions <- grouped_df[grouped_df$Question == "NA", ] # 87
+missing_questions <- grouped_df[grouped_df$Question == "NA", ] # 98
+missing_indexes <- which(grouped_df$Question == "NA")
 # export for checking:
 write.csv(missing_questions, "missing_questions_ilona02_05.csv", row.names = FALSE)
-
-# read Flavias file
-flavias_manual_assigned_file <- "Copy of missing_Q_situationalwhat60_wQuestionColumn_ADDED.xlsx"
-# read the file
-flavias_manual_assigned_df <- read_excel(flavias_manual_assigned_file)
+# 0 duplicates left
+#########################################################
+# debug
+test <- missing_questions |>
+  filter(PID == "R_wZV9rmD5c6rL2TL" & VideoID == 21)
+view(test)
+################################################################
+# after checking that all missing questions are answered, I modified Flavias 2 files into a single one
+# where each row has exactly one question
+all_missing_questions_answered_manually_file <- "missing_Q_from_flavia_by_ilona06_05_24.xlsx"
+all_missing_questions_answered_manually_df <- read_excel(all_missing_questions_answered_manually_file)
 solved <- 0
-# look for solutions in Flavias file
+# create a new df that will have all rows that were missing questions in grouped df answered
+new_column_names <- colnames(missing_questions)
+solved_df <- data.frame(matrix(ncol = length(new_column_names), nrow = 0))
+colnames(solved_df) <- new_column_names
 for (i in 1:nrow(missing_questions)) {
   # Access the ith row using df[i, ]
   current_row <- missing_questions[i, ]
   my_id <- current_row$PID
   my_videoID <- current_row$VideoID
   my_code <- current_row$Code
-  matching_row <- flavias_manual_assigned_df %>%
+  matching_rows <- all_missing_questions_answered_manually_df %>%
     filter(PID == my_id,
            VideoID == my_videoID,
            Code == my_code)
-  if (nrow(matching_row)>0) {
-    missing_q <- matching_row$Question
-    print(missing_q)
-    missing_questions[i,"Question"] <- missing_q
-    solved <- solved + 1
-    }
-  
+  if (nrow(matching_rows)>0) {
+    for (row in 1:nrow(matching_rows)) {
+      matched <- matching_rows[row, ]
+      missing_q <- matched$Question
+      print(missing_q)
+      # insert found question just to keep track of what was resolved
+      missing_questions[i,"Question"] <- missing_q
+      solved <- solved + 1
+      new_row <- c(matched$PID,matched$VideoID,matched$Code,current_row$Segment,matched$Other,matched$Question)
+      solved_df <- rbind(solved_df, new_row)
+    } # end for each matched row
+  } # end if match was found
 }
-# how many are still unresolved?
-remaining_missing_questions <- missing_questions[missing_questions$Question == "NA", ] # 27
-# look again into video cell to find answers:
-for (i in 1:nrow(remaining_missing_questions)) {
-  current_row <- missing_questions[i, ]
-  my_id <- current_row$PID
-  my_videoID <- current_row$VideoID
-  my_code <- current_row$Code
-  my_segment <- current_row$Segment
-  video_row <- codes_only_df[codes_only_df$PID == my_id &
-                               codes_only_df$VideoID == my_videoID &
-                    grepl("^Video", codes_only_df$Code), ]
-  # Check if any rows were found
-  if (nrow(video_row) == 0) {
-    print("No Video cell found.")
-  }
-  # Extract and split the string
-  split_string <- unlist(strsplit(video_row$Segment, "\r\n\r\n"))
-  # print(split_string)
-  print(length(split_string))
-  segment <- unlist(strsplit(my_segment, "\r\n\r\n"))
-  for (item in segment) {
-  q <- retrieve_question_based_on_answer_in_segment(video_questions,split_string, item)
-  print(q)
-  }
-}
+# check if all have been solved. Should be 0 remaining
+remaining_missing_questions <- missing_questions[missing_questions$Question == "NA", ]
+colnames(solved_df) <- new_column_names
+# double check for NA
+solved_df[solved_df$Question == "NA", ]
+#############################################################
+# if the above gave remaining_missing_questions = 0, proceed:
+# there were more rows than missing questions because some of the codes and segments had the same question
+# those rows need to be split so that the same code and segment will have different question
+# i.e Segment: he is bothering me, Code: RELATIONAL INTIMACY > Situational > What > Annoy / Tease
+# Questions: Social_context and Intention&Purpose
+
+# Remove the missing questions from grouped_df
+grouped_df <- grouped_df[-missing_indexes, ]
+# double check for NA
+grouped_df[grouped_df$Question == "NA", ]
+# add newly resolved rows
+resolved_df <- rbind(grouped_df, solved_df)
+
+# sort nicely
+resolved_df <- resolved_df %>% 
+  arrange(PID, VideoID)
+
+
+# check if Appropriateness came back and remove Appropriateness question
+resolved_df <- resolved_df %>%
+  filter(Question != "Appropriateness")
+# double check for NA
+resolved_df[resolved_df$Question == "NA", ]
+#####################################################################
+# checking Flavias manually answered files
+# # look for solutions in Flavias file
+# for (i in 1:nrow(missing_questions)) {
+#   # Access the ith row using df[i, ]
+#   current_row <- missing_questions[i, ]
+#   my_id <- current_row$PID
+#   my_videoID <- current_row$VideoID
+#   my_code <- current_row$Code
+#   matching_row <- flavias_manual_assigned_df %>%
+#     filter(PID == my_id,
+#            VideoID == my_videoID,
+#            Code == my_code)
+#   if (nrow(matching_row)>0) {
+#     for (row in 1:nrow(matching_row)) {
+#       matched <- matching_row[row, ]
+#       missing_q <- matched$Question
+#       print(missing_q)
+#       # insert found question just to keep track of what was resolved
+#       missing_questions[i,"Question"] <- missing_q
+#       solved <- solved + 1
+#     } # end for each matched row
+#   } # end if match was found
+#   
+# }
+# # some cases have 2 questions: Social_context and Intention&Purpose, should I split them in 2 rows: YES todo
+# # how many are still unresolved?
+# remaining_missing_questions <- missing_questions[missing_questions$Question == "NA", ] # 38
+# write.csv(remaining_missing_questions, "remaining_missing06_05_24.csv", row.names = FALSE)
+# 
+# 
+# # read Flavias file
+# flavias_manual_assigned_file2 <- "missing_Q_remaining38_wQuestionColumn_ADDED.xlsx"
+# # read the file
+# flavias_manual_assigned_df2 <- read_excel(flavias_manual_assigned_file2)
+# # look for solutions in Flavias file
+# solved2 <- 0
+# for (i in 1:nrow(remaining_missing_questions)) {
+#   # Access the ith row using df[i, ]
+#   current_row <- remaining_missing_questions[i, ]
+#   my_id <- current_row$PID
+#   my_videoID <- current_row$VideoID
+#   my_code <- current_row$Code
+#   my_segment <- current_row$Segment
+#   matching_row <- flavias_manual_assigned_df2 %>%
+#     filter(PID == my_id,
+#            VideoID == my_videoID,
+#            Code == my_code,
+#            Segment == my_segment)
+#   if (nrow(matching_row)>0) {
+#     missing_q <- matching_row$Question
+#     print(nrow(matching_row))
+#     print(missing_q)
+#     # missing_questions[i,"Question"] <- missing_q
+#     solved2 <- solved2 + 1
+#   }
+#   
+# }
 ########################################################################
 
 # change order of columns
 new_col_order <- c("PID", "VideoID", "Segment", "Code", "Question", "Other")
-grouped_df <- grouped_df %>% select(all_of(new_col_order))
-
+resolved_df <- resolved_df %>% select(all_of(new_col_order))
+NA_questions <- resolved_df %>%
+  filter(Question == "NA")
 
 # check if all videos have all unique questions answered
 # keep in mind that NA will be counted as unique question
 # so check after removing NA
-no_NA_questions <- grouped_df %>%
+no_NA_questions <- resolved_df %>%
   filter(Question != "NA")
 
 result_no_NA <- no_NA_questions %>%
@@ -722,31 +830,16 @@ result_no_NA <- no_NA_questions %>%
 all_8 <- all(result_no_NA$unique_question_count == 8)
 
 # Count the occurrences where unique_question_count is not equal to 8
-not_equal_8 <- sum(result_no_NA$unique_question_count < 8) # 111
-##############################################################
-# How many I would have to exclude? Because of NA
-unique_combinations <- missing_questions %>%
-  distinct(PID, VideoID)
-# exclude missing
-excluded_videos_with_missing_questions_df <- grouped_df %>%
-  anti_join(unique_combinations, by = c("PID", "VideoID"))
-# how many unique PID+VideoID are there
-total_unique_video_pid <- excluded_videos_with_missing_questions_df %>%
-  distinct(PID, VideoID)
-# distinct questions
-result <- excluded_videos_with_missing_questions_df %>%
-  group_by(PID, VideoID) %>%
-  summarize(unique_question_count = n_distinct(Question))
+not_equal_8 <- sum(result_no_NA$unique_question_count < 8) # 86
 
-all_8 <- all(result$unique_question_count == 8)
-# Count the occurrences where unique_question_count is not equal to 8
-less_than_8 <- sum(result$unique_question_count < 8) # 60
-##############################################################
-# export for checking:
-write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona24_04.csv"), row.names = FALSE)
-
-#############################################################
+# # export for checking:
+# write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona24_04.csv"), row.names = FALSE)
+# 
+# #############################################################
 # TEST CASES
+
+# R_wZV9rmD5c6rL2TL video 21 21_Sensory > Autocode - ANY: comfort (Lemmatized): this should have question assigned early!
+
 # check mismatch of lines in answers in video and video questions
 # R_2RUsV3SU6UbZ3as 22
 # R_sb3cXFomtybyKlj 14
