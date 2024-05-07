@@ -679,9 +679,9 @@ write.csv(missing_questions, "missing_questions_ilona02_05.csv", row.names = FAL
 # 0 duplicates left
 #########################################################
 # debug
-test <- missing_questions |>
-  filter(PID == "R_wZV9rmD5c6rL2TL" & VideoID == 21)
-view(test)
+# test <- missing_questions |>
+#   filter(PID == "R_wZV9rmD5c6rL2TL" & VideoID == 21)
+# view(test)
 ################################################################
 # after checking that all missing questions are answered, I modified Flavias 2 files into a single one
 # where each row has exactly one question
@@ -744,6 +744,47 @@ resolved_df <- resolved_df %>%
   filter(Question != "Appropriateness")
 # double check for NA
 resolved_df[resolved_df$Question == "NA", ]
+# check duplicates after adding manually added questions
+# 21 duplicates. Assumption, they manually added questions came from merging 2 files 
+# and since Other is the same, therefore they are true duplicates and can be removed
+remaining_duplicates <- resolved_df %>% 
+  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
+  tally() %>% 
+  filter(n!=1)
+
+for (i in 1:nrow(remaining_duplicates)) {
+  my_row <- remaining_duplicates[i, ]
+  if (nrow(my_row) > 0) {
+    my_pid <- my_row$PID
+    my_videoID <- my_row$VideoID
+    my_segment <- my_row$Segment
+    my_code <- my_row$Code
+    my_question <- my_row$Question
+    my_other <- my_row$Other
+    matching_rows <- resolved_df %>%
+      filter(PID == my_pid,
+             VideoID == my_videoID,
+             Segment == my_segment,
+             Code == my_code,
+             Question == my_question,
+             Other == my_other)
+      matching_row_to_keep <- matching_rows %>%
+        slice(1)
+      # Remove all but the first matching row from codes_only_df
+      resolved_df <- resolved_df %>%
+        anti_join(matching_row_to_keep) %>%
+        bind_rows(matching_row_to_keep)  # Append the first matching row back to codes_only_df
+  }
+  else {
+    print(checkPID)
+    print("Not in duplicates")
+  }
+}
+# UNIQUENESS OF ROWS ####
+remaining_duplicates <- resolved_df %>% 
+  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
+  tally() %>% 
+  filter(n!=1)
 #####################################################################
 # checking Flavias manually answered files
 # # look for solutions in Flavias file
@@ -808,8 +849,6 @@ new_col_order <- c("PID", "VideoID", "Segment", "Code", "Question", "Other")
 resolved_df <- resolved_df %>% select(all_of(new_col_order))
 
 # check if all videos have all unique questions answered
-# keep in mind that NA will be counted as unique question
-# so check after removing NA
 result_no_NA <- resolved_df %>%
   group_by(PID, VideoID) %>%
   summarize(unique_question_count = n_distinct(Question))
@@ -818,6 +857,8 @@ all_8 <- all(result_no_NA$unique_question_count == 8)
 
 # Count the occurrences where unique_question_count is not equal to 8
 not_equal_8 <- sum(result_no_NA$unique_question_count < 8) # 86
+# that means that there were no codes created for those segments and questions
+
 # create a dataframe for export
 less_than_8_questions_df <- result_no_NA |> 
   filter(unique_question_count < 8)
@@ -855,22 +896,111 @@ less_than_8_questions_df <- merge(less_than_8_questions_df, missing_questions_pe
   
 # export for checking:
 # write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona07_05_24.csv"), row.names = FALSE)
-write.csv(resolved_df, "output_preprocessed_codes_ilona07_05_24.csv", row.names = FALSE)
-write.csv(less_than_8_questions_df, "less_questions_ids_ilona07_05_24.csv", row.names = FALSE)
+# write.csv(resolved_df, "output_preprocessed_codes_ilona07_05_24.csv", row.names = FALSE)
+write.csv(less_than_8_questions_df, "less_questions_ilona07_05_24.csv", row.names = FALSE)
 write.csv(less_than_8_questions_details, "less_questions_details_ilona07_05_24.csv", row.names = FALSE)
 
 
+# try finding missing questions rows based on "Video cell" and knowing that 
+# Segment has all answers to ordered questions
+# create a new df that will have all rows that were missing questions in grouped df answered
+my_column_names <- colnames(resolved_df)
+additional_missing_questions_df <- data.frame(matrix(ncol = length(my_column_names), nrow = 0))
+colnames(additional_missing_questions_df) <- new_column_names
+# create dataframe for problematic cases
+problematic_df <- data.frame(matrix(ncol = length(my_column_names), nrow = 0))
+colnames(problematic_df) <- new_column_names
+not_matched_questions <- 0
+no_video <- 0
+for (i in 1:nrow(less_than_8_questions_df)) {
+  current_row <- less_than_8_questions_df[i, ]
+  my_pid <- current_row$PID
+  my_videoid <- current_row$VideoID
+  missing_codes <- strsplit(current_row$missing_questions, ",")[[1]]
+  # find video cell for that watched video
+  video_row <- codes_only_df[codes_only_df$PID == my_pid &
+                               codes_only_df$VideoID == my_videoid &
+                    grepl("^Video", codes_only_df$Code), ]
+  # Check if any rows were found
+  if (nrow(video_row) == 0) {
+    no_video <- no_video + 1
+    # print(my_pid)
+    # print(my_videoid)
+    # print("No Video cell found.")
+    for (q in missing_codes) {
+      problem_row <- c(my_pid,my_videoid,"NA","NA","NA",q)
+      problematic_df <- rbind(problematic_df,problem_row)
+    }
+  }
+  else {
+    # Extract and split the string
+    split_segment <- unlist(strsplit(video_row$Segment, "\r\n\r\n"))
+    if (length(split_segment) != length(video_questions)) {
+      not_matched_questions <- not_matched_questions + 1
+      # print("Number of answers in Video cell does not match the number of video questions")
+      # print(my_pid)
+      # print(my_videoid)
+      # print(q)
+      # print(video_row$Segment)
+      for (q in missing_codes) {
+        problem_row <- c(my_pid,my_videoid,"NA",video_row$Segment,"NA",q)
+        problematic_df <- rbind(problematic_df,problem_row)
+      }
+    } # end if more or less questions than segments
+    else {
+      for (q in missing_codes) {
+        # Find the index of question
+        idx <- which(video_questions == q)
+        # If my_string is found in the segment vector
+        if (length(idx) > 0) {
+          # Retrieve the corresponding segment from the questions vector
+          my_index <- idx[1]
+          # create a row to add to resolved dataframe
+          new_row <- c(my_pid,my_videoid,"NA",split_segment[my_index],"NA",q)
+          additional_missing_questions_df <- rbind(additional_missing_questions_df,new_row)
+        } else {
+          # If my_string is not found, return NA
+          print("NA")
+        } # end if question did not match segment
+      } # end for each missing code/question
+    } # if segment lines matched the number of questions
+  } # end if video row was found
+}
+colnames(additional_missing_questions_df) <- new_column_names
+colnames(problematic_df) <- new_column_names
+total_uniq <- problematic_df |> 
+  group_by(PID,VideoID) |> 
+  tally()
+write.csv(problematic_df, "problematic_no_code4question_ilona07_05_24.csv", row.names = FALSE)
+# 60 cases resolved by looking at "Video cell"
+# 25 not matched segment with the number of questions
+# 3 missing "Video cells"
+# add newly resolved rows
+resolved_df <- rbind(resolved_df, additional_missing_questions_df)
+# sort nicely
+resolved_df <- resolved_df %>% 
+  arrange(PID, VideoID)
+# UNIQUENESS OF ROWS ####
+remaining_duplicates <- resolved_df %>% 
+  group_by(PID, VideoID, Code, Segment, Other, Question) %>% 
+  tally() %>% 
+  filter(n!=1)
 
 
+# export
+write.csv(resolved_df, "output_preprocessed_codes_ilona07_05_24.csv", row.names = FALSE)
+
+# check if all videos have all unique questions answered
+result <- resolved_df %>%
+  group_by(PID, VideoID) %>%
+  summarize(unique_question_count = n_distinct(Question))
+
+all_8 <- all(result$unique_question_count == 8)
+
+# Count the occurrences where unique_question_count is not equal to 8
+not_equal_8 <- sum(result$unique_question_count < 8) # 28 left
 
 
-
-
-
-
-
- 
-
-
-
-
+# create a dataframe for export
+remaining_less_than_8_questions_df <- result |> 
+  filter(unique_question_count < 8)
