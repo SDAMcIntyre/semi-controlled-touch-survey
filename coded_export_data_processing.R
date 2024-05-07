@@ -492,13 +492,6 @@ for (ind in 1:no_rows) {
     if (length(questions) > 1) { # Other had multiple questions
       # for now assign the first question
       question <- questions[1]
-      ########################################
-      # debug
-      if (ind == 35655) {
-        print("Debug")
-        print(codes_only_df$Code[ind])
-      }
-      ########################################
       # add index for further processing and splitting
       relational_rows_for_splitting <- c(relational_rows_for_splitting, ind)
     } # end if len > 1
@@ -810,20 +803,14 @@ resolved_df[resolved_df$Question == "NA", ]
 #   
 # }
 ########################################################################
-
 # change order of columns
 new_col_order <- c("PID", "VideoID", "Segment", "Code", "Question", "Other")
 resolved_df <- resolved_df %>% select(all_of(new_col_order))
-NA_questions <- resolved_df %>%
-  filter(Question == "NA")
 
 # check if all videos have all unique questions answered
 # keep in mind that NA will be counted as unique question
 # so check after removing NA
-no_NA_questions <- resolved_df %>%
-  filter(Question != "NA")
-
-result_no_NA <- no_NA_questions %>%
+result_no_NA <- resolved_df %>%
   group_by(PID, VideoID) %>%
   summarize(unique_question_count = n_distinct(Question))
 
@@ -831,32 +818,52 @@ all_8 <- all(result_no_NA$unique_question_count == 8)
 
 # Count the occurrences where unique_question_count is not equal to 8
 not_equal_8 <- sum(result_no_NA$unique_question_count < 8) # 86
+# create a dataframe for export
+less_than_8_questions_df <- result_no_NA |> 
+  filter(unique_question_count < 8)
+# create a dataframe with details 
+less_than_8_questions_details <- semi_join(resolved_df, less_than_8_questions_df, by = c("PID", "VideoID"))
 
-# # export for checking:
-# write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona24_04.csv"), row.names = FALSE)
-# 
-# #############################################################
-# TEST CASES
+# Check which questions are missing
+questions2check <- c(
+  "Social_self", "Social_body", "Social_place", "Social_context", "Intention&Purpose", 
+  "Sensory", "Emotional_self", "Emotional_touch"
+)
+# Define a function to check for missing questions in each group
+check_missing_questions <- function(group_df,questions2check) {
+  # Get unique questions in the group
+  group_questions <- unique(group_df$Question)
+  
+  # Find missing questions
+  missing_questions <- setdiff(questions2check, group_questions)
+  # Convert missing questions to tab-separated string
+  missing_questions_string <- paste(missing_questions, collapse = ",")
+  
+  return(missing_questions_string)
+}
 
-# R_wZV9rmD5c6rL2TL video 21 21_Sensory > Autocode - ANY: comfort (Lemmatized): this should have question assigned early!
+# Apply the function to each group in the grouped dataframe
+missing_questions_per_group <- less_than_8_questions_details %>%
+  group_by(PID, VideoID) %>%
+  summarise(missing_questions = check_missing_questions(cur_data(), questions2check)) %>%
+  ungroup()
+# add that result column to less_than_8_questions_df
+# Merge missing_questions_per_group with less_than_8_questions_df
+less_than_8_questions_df <- merge(less_than_8_questions_df, missing_questions_per_group, by = c("PID", "VideoID"))
+  
+  
+  
+# export for checking:
+# write.csv(grouped_df, paste0(PROCESSED_DATA_FOLDER,"output_preprocessed_codes_ilona07_05_24.csv"), row.names = FALSE)
+write.csv(resolved_df, "output_preprocessed_codes_ilona07_05_24.csv", row.names = FALSE)
+write.csv(less_than_8_questions_df, "less_questions_ids_ilona07_05_24.csv", row.names = FALSE)
+write.csv(less_than_8_questions_details, "less_questions_details_ilona07_05_24.csv", row.names = FALSE)
 
-# check mismatch of lines in answers in video and video questions
-# R_2RUsV3SU6UbZ3as 22
-# R_sb3cXFomtybyKlj 14
-# R_BM9eDkmZBgiYlpv 21
-test <- grouped_df |> 
-  filter(PID == "R_sb3cXFomtybyKlj" & VideoID == 14)
-view(test)
 
-# R_30kOsStRfZm9yre - 8 out of 9 questions in Video Cell
-# R_2RUsV3SU6UbZ3as video 22 - in video cell 10 answers
-# R_sb3cXFomtybyKlj video 14 - in video cell 10 answers
-# R_BM9eDkmZBgiYlpv video 21 - a lot of answers
-# R_43hVeyIKepnUEEx video 1 - no video cell
-# R_1NttFTJhyRsgg7F video 1 - no video cell
-# R_3R8B3HBRQ8QBWox video 1 - no video cell
-# R_2qmDkHfYapINtzc video 1 - no video cell
-#
+
+
+
+
 
 
 
